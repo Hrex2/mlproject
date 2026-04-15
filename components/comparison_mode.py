@@ -1,7 +1,8 @@
 import streamlit as st
 import pandas as pd
 from src.evaluate import compare_models
-from src.utils import fill_defaults   # 🔥 NEW
+from src.utils import fill_defaults
+
 
 def run(models, scaler):
 
@@ -12,10 +13,11 @@ def run(models, scaler):
     if file:
         df = pd.read_csv(file)
 
-        st.write("Preview:", df.head())
+        st.write("### 📂 Preview")
+        st.dataframe(df.head())
 
         if "Attrition" not in df.columns:
-            st.error("❌ Need 'Attrition' column")
+            st.error("❌ Dataset must contain 'Attrition' column")
             return
 
         # 🔥 Fill missing features
@@ -25,8 +27,27 @@ def run(models, scaler):
 
             results = compare_models(models, scaler, df)
 
-            st.write("### Metrics")
+            # 📊 Metrics
+            st.markdown("## 📊 Metrics")
             st.dataframe(results["metrics"])
 
-            st.write("### ROC Curve")
+            # 🏆 Best Model
+            best = results["metrics"].sort_values("Accuracy", ascending=False).iloc[0]
+            st.success(
+                f"🏆 Best Model: {best['Model']} "
+                f"(Accuracy: {best['Accuracy']:.2f})"
+            )
+
+            st.markdown("---")
+
+            # 📈 ROC Curve
+            st.markdown("## 📈 ROC Curve")
             st.pyplot(results["roc"])
+
+            # 📊 Accuracy Comparison
+            st.markdown("## 📊 Accuracy Comparison")
+            st.pyplot(results["bar"])
+
+            # 🔥 Confusion Matrix
+            st.markdown("## 🔥 Confusion Matrix")
+            st.pyplot(results["cm"])

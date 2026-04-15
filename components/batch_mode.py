@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
-from src.predict import predict
-from src.utils import fill_defaults   # 🔥 NEW
+import matplotlib.pyplot as plt
+from src.predict import predict, preprocess_input
+from src.utils import fill_defaults
+
 
 def run(models, scaler):
 
@@ -12,33 +14,77 @@ def run(models, scaler):
     if file:
         df = pd.read_csv(file)
 
-        st.write("### Preview")
+        st.write("### 📂 Preview")
         st.dataframe(df.head())
 
-        # 🔥 Fill missing features automatically
+        # 🔥 Fill missing features
         df = fill_defaults(df)
 
         if st.button("Predict Batch"):
 
-            preds = predict(models["Random Forest"], scaler, df)
+            model = models["Random Forest"]
 
+            # predictions
+            preds = predict(model, scaler, df)
             df["Prediction"] = preds
 
-            st.write("### Results")
+            # probability
+            df_processed = preprocess_input(df.drop("Prediction", axis=1))
+            df_scaled = scaler.transform(df_processed)
+            probs = model.predict_proba(df_scaled)[:, 1]
+
+            df["Attrition_Probability"] = probs
+
+            st.write("### 📊 Results")
             st.dataframe(df)
 
             # download
             csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button("Download Results", data=csv, file_name="output.csv")
 
-            st.download_button(
-                "Download Results",
-                data=csv,
-                file_name="output.csv",
-                mime="text/csv"
-            )
+            st.markdown("---")
 
-            # summary
+            # =======================
+            # 📊 GRAPH 1: Distribution
+            # =======================
+            st.markdown("## 📊 Prediction Distribution")
+
+            fig1, ax1 = plt.subplots()
+            counts = df["Prediction"].value_counts()
+            ax1.bar(["Stay", "Leave"], counts)
+            ax1.set_title("Attrition Count")
+            st.pyplot(fig1)
+
+            # =======================
+            # 📈 GRAPH 2: Probability Histogram
+            # =======================
+            st.markdown("## 📈 Attrition Risk Distribution")
+
+            fig2, ax2 = plt.subplots()
+            ax2.hist(df["Attrition_Probability"], bins=10)
+            ax2.set_title("Probability Distribution")
+            st.pyplot(fig2)
+
+            # =======================
+            # 📊 GRAPH 3: Department-wise
+            # =======================
+            if "Department" in df.columns:
+                st.markdown("## 📊 Department-wise Attrition")
+
+                dept_data = df.groupby("Department")["Prediction"].mean()
+
+                fig3, ax3 = plt.subplots()
+                dept_data.plot(kind="bar", ax=ax3)
+                ax3.set_title("Attrition Rate by Department")
+                st.pyplot(fig3)
+
+            # =======================
+            # 🎯 Summary Metrics
+            # =======================
+            st.markdown("## 🎯 Summary")
+
             leave = df["Prediction"].sum()
             total = len(df)
 
-            st.metric("Attrition Risk Count", f"{leave}/{total}")
+            st.metric("Employees Likely to Leave", f"{leave}/{total}")
+            st.metric("Avg Attrition Risk", f"{df['Attrition_Probability'].mean()*100:.1f}%")
