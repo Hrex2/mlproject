@@ -1,19 +1,24 @@
 import streamlit as st
 import pandas as pd
 from src.predict import predict, preprocess_input
+from src.utils import fill_defaults   # ✅ correct place
+
 
 def run(models, scaler):
 
     st.subheader("👤 Employee Prediction (Advanced)")
 
-    # 🔹 Important Inputs
+    # 🔹 Inputs
     age = st.slider("Age", 18, 60)
     gender = st.selectbox("Gender", ["Male", "Female"])
     dept = st.selectbox("Department", ["Sales", "HR", "Research & Development"])
+
     job_role = st.selectbox("Job Role", [
-        "Sales Executive", "Research Scientist", "Laboratory Technician",
-        "Manager", "Manufacturing Director"
+        "Sales Executive", "Research Scientist",
+        "Laboratory Technician", "Manager",
+        "Manufacturing Director"
     ])
+
     marital = st.selectbox("Marital Status", ["Single", "Married"])
     overtime = st.selectbox("OverTime", ["Yes", "No"])
 
@@ -23,28 +28,25 @@ def run(models, scaler):
 
     if st.button("Predict"):
 
-        # 🔥 Full feature structure (important)
-        df = pd.DataFrame([{from src.utils import fill_defaults   # 🔥 ADD
+        # ✅ Create DataFrame
+        df = pd.DataFrame([{
+            "Age": age,
+            "Gender": gender,
+            "Department": dept,
+            "JobRole": job_role,
+            "MaritalStatus": marital,
+            "OverTime": overtime,
+            "MonthlyIncome": income,
+            "JobLevel": job_level,
+            "TotalWorkingYears": experience
+        }])
 
-# inside button
-df = pd.DataFrame([{
-    "Age": age,
-    "Gender": gender,
-    "Department": dept,
-    "JobRole": job_role,
-    "MaritalStatus": marital,
-    "OverTime": overtime,
-    "MonthlyIncome": income,
-    "JobLevel": job_level,
-    "TotalWorkingYears": experience
-}])
-
-# 🔥 ADD THIS (instead of manual defaults)
-df = fill_defaults(df)
-           
+        # ✅ Fill missing features
+        df = fill_defaults(df)
 
         model = models["Random Forest"]
 
+        # prediction
         pred = predict(model, scaler, df)[0]
 
         # probability
@@ -52,6 +54,7 @@ df = fill_defaults(df)
         df_scaled = scaler.transform(df_processed)
         prob = model.predict_proba(df_scaled)[0][1]
 
+        # output
         if pred == 1:
             st.error(f"⚠️ High Risk ({prob*100:.1f}%)")
         else:

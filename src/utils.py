@@ -1,5 +1,3 @@
-import pandas as pd
-
 def fill_defaults(df):
 
     defaults = {

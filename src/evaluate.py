@@ -7,14 +7,14 @@ from src.predict import preprocess_input
 def compare_models(models, scaler, df):
 
     X = df.drop("Attrition", axis=1)
-    y = df["Attrition"]
 
-    # 🔥 FIX: convert Yes/No → 1/0
-    if y.dtype == "object":
-        y = y.map({"Yes": 1, "No": 0})
+    # 🔥 FIXED LABEL HANDLING
+    y = df["Attrition"].map({"Yes": 1, "No": 0})
 
     y = y.dropna()
     X = X.loc[y.index]
+
+    y = y.astype(int)
 
     # preprocessing
     X = preprocess_input(X)
@@ -30,7 +30,7 @@ def compare_models(models, scaler, df):
     for name, model in models.items():
         y_prob = model.predict_proba(X_test)[:, 1]
 
-        fpr, tpr, _ = roc_curve(y_test, y_prob)
+        fpr, tpr, _ = roc_curve(y_test, y_prob, pos_label=1)
         roc_auc = auc(fpr, tpr)
 
         ax.plot(fpr, tpr, label=f"{name} (AUC={roc_auc:.2f})")
